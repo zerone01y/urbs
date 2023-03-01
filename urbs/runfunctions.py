@@ -1,13 +1,15 @@
-import os
 import pyomo.environ
 from pyomo.opt.base import SolverFactory
 from datetime import datetime, date
-from .model import create_model
 from .report import *
-from .plot import *
-from .input import *
 from .validation import *
-from .saveload import *
+from .input import *
+from .model import create_model
+from .saveload import save
+from .dataset import DataSet
+from .plot import result_figures
+import pathlib
+import shutil
 
 
 def prepare_result_directory(result_name):
@@ -24,9 +26,11 @@ def prepare_result_directory(result_name):
     now = datetime.now().strftime("%Y%m%dT%H%M")
 
     # create result directory if not existent
-    result_dir = os.path.join("result", "{}-{}".format(result_name, now))
-    if not os.path.exists(result_dir):
-        os.makedirs(result_dir)
+    result_dir = pathlib.Path("result", "{}-{}".format(result_name, now))
+    if not result_dir.is_dir():
+        result_dir.mkdir()
+    (result_dir / "Log").mkdir(exist_ok=True)
+    (result_dir / "Scenarios").mkdir(exist_ok=True)
 
     return result_dir
 
