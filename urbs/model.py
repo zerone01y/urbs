@@ -278,7 +278,7 @@ def create_model(data, dt=1, timesteps=None, objective="cost", dual=True):
     m.e_pro_out = pyomo.Var(
         m.tm,
         m.pro_output_tuples,
-        within=pyomo.NonNegativeReals,
+        within=pyomo.Reals,
         doc="Power flow out of process (MW) per timestep",
     )
 
@@ -358,7 +358,7 @@ def create_model(data, dt=1, timesteps=None, objective="cost", dual=True):
         m.tm,
         m.pro_input_tuples,
         rule=def_intermittent_supply_rule,
-        doc="process output = process capacity * supim timeseries",
+        doc="process input = process capacity * supim timeseries",
     )
     m.res_process_throughput_by_capacity = pyomo.Constraint(
         m.tm,
@@ -497,9 +497,8 @@ def create_model(data, dt=1, timesteps=None, objective="cost", dual=True):
 # contains implicit constraint for stock commodity source term
 def res_vertex_rule(m, tm, stf, sit, com, com_type):
     # environmental or supim commodities don't have this constraint (yet)
-    if com in m.com_env:
-        return pyomo.Constraint.Skip
-    if com in m.com_supim:
+
+    if com not in m.com_stock | m.com_demand:
         return pyomo.Constraint.Skip
 
     # helper function commodity_balance calculates balance from input to

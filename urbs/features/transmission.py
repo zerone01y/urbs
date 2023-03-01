@@ -104,7 +104,7 @@ def add_transmission(m):
         m.tm,
         m.tra_tuples,
         rule=res_transmission_input_by_capacity_rule,
-        doc="transmission input <= total transmission capacity",
+        doc="total transmission input <= total transmission capacity",
     )
     m.res_transmission_capacity = pyomo.Constraint(
         m.tra_tuples,
@@ -261,7 +261,7 @@ def add_transmission_dc(m):
         m.tm,
         m.tra_tuples,
         rule=res_transmission_input_by_capacity_rule,
-        doc="transmission input <= total transmission capacity",
+        doc="total transmission input <= total transmission capacity",
     )
     m.res_transmission_dc_input_by_capacity = pyomo.Constraint(
         m.tm,
@@ -376,6 +376,7 @@ def e_tra_abs_rule2(m, tm, stf, sin, sout, tra, com):
 def res_transmission_input_by_capacity_rule(m, tm, stf, sin, sout, tra, com):
     return (
         m.e_tra_in[tm, stf, sin, sout, tra, com]
+        + m.e_tra_in[tm, stf, sout, sin, tra, com]
         <= m.dt * m.cap_tra[stf, sin, sout, tra, com]
     )
 

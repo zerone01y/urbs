@@ -1,7 +1,22 @@
 import pandas as pd
+import pyomo.core
+
 from .input import get_input
-from .pyomoio import get_entity, get_entities
-from .util import is_string
+from urbs.pyomoio import get_entity, get_entities
+
+
+def entity_to_sql(
+    instance: pyomo.core.ConcreteModel,
+    component_name: str,
+    sql_conn,
+    scenario: str,
+    prefix: str = "",
+):
+    entityvalue = get_entity(instance, component_name)
+    entityvalue = pd.concat([entityvalue], keys=[scenario], names=["Scenario"])
+    entityvalue.to_sql(
+        "_".join([prefix, component_name]).strip("_"), sql_conn, if_exists="append"
+    )
 
 
 def get_constants(instance):
@@ -53,6 +68,16 @@ def get_constants(instance):
         csto.sort_index(inplace=True)
 
     return costs, cpro, ctra, csto
+
+def get_com_list_annual(instance, com):
+    return (
+        get_entity(instance, "e_pro_out")
+        .xs([com], level=["com"])
+        .unstack("t")
+        .sum(axis=1)
+        .replace(0, pd.NaT)
+        .rename_axis(index=["Year", "Region", "Tech"])
+    )
 
 
 def get_timeseries(instance, stf, com, sites, timesteps=None):
@@ -270,6 +295,135 @@ def get_timeseries(instance, stf, com, sites, timesteps=None):
     voltage_angle.name = "Voltage Angle"
 
     return created, consumed, stored, imported, exported, dsm, voltage_angle
+
+
+def get_dual(instance, constraint):
+    return get_entity(instance, constraint)
+
+
+def get_all_timeseries(instance, timesteps=None):
+    """Return DataFrames of all timeseries referring to given commodity
+
+    Usage:
+        created, consumed, stored, imported, exported,
+        dsm = get_timeseries(instance, commodity, sites, timesteps)
+
+    Args:
+        - instance: a urbs model instance
+        - com: a commodity name
+        - sites: a site name or list of site names
+        - timesteps: optional list of timesteps, default: all modelled
+          timesteps
+
+    Returns:
+        a tuple of (created, consumed, storage, imported, exported, dsm) with
+        DataFrames timeseries. These are:
+
+        - created: timeseries of commodity creation, i.g. Electricity and CO2
+        - transmitted: timeseries of commodity import, i.e. Electricity
+        - storage: time series of commodity storage, i.e. Electricity
+
+        - balance: join of created, import and export,
+    """
+    if timesteps is None:
+        # default to all simulated timesteps
+        timesteps = sorted(get_entity(instance, "tm").index)
+    else:
+        timesteps = sorted(timesteps)  # implicit: convert range to list
+
+    # DEMAND
+    # default to zeros if commodity has no demand, get timeseries
+    idx = pd.IndexSlice
+
+    # PROCESS output from each process
+    created = get_entity(instance, "e_pro_out")
+    used = -get_entity(instance, "e_pro_in").loc[
+        idx[:, :, :, :, created.index.levels[4]]
+    ]
+    created = pd.concat([created, used])
+
+    # index: (t, stf, sit, com); column: generation tech
+    try:
+        created = created.loc[timesteps]
+        created = created.unstack(level="pro").fillna(0)
+    except KeyError:
+        created = pd.DataFrame(index=timesteps)
+    # if commodity is transportable
+    try:
+        imported = get_entity(instance, "e_tra_out").loc[timesteps]  # out: after loss
+        exported = get_entity(instance, "e_tra_in").loc[timesteps]
+
+        # sum over the "From" column
+        total_imports = (
+            imported.sum(level=["t", "stf", "sit_", "com"])
+            .rename("imports")
+            .rename_axis(index={"sit_": "sit"})
+        )
+
+        # sum over the "To" column
+        total_exports = -exported.sum(level=["t", "stf", "sit", "com"]).rename(
+            "exports"
+        )
+        balance = created.join([total_imports, total_exports])
+
+        transmitted = pd.concat(
+            [exported, imported],
+            axis=1,
+            keys=["exported", "imported"],
+        )
+
+        transmitted.index.names = ["t", "Stf", "From", "To", "Tra", "Commodity"]
+
+    except KeyError:
+        # imported and exported are empty
+        transmitted = pd.DataFrame(index=timesteps)
+    # if storage is allowed
+    try:
+        stored = (
+            get_entities(instance, ["e_sto_con", "e_sto_in", "e_sto_out"])
+            .loc[timesteps]
+            .rename(
+                columns={
+                    "e_sto_con": "Level",
+                    "e_sto_in": "Storage(charging)",
+                    "e_sto_out": "Storage(discharging)",
+                }
+            )
+        )
+        stored["Storage(charging)"] = -stored["Storage(charging)"]
+        balance = balance.join(
+            stored[["Storage(charging)", "Storage(discharging)"]].sum(
+                level=[0, 1, 2, 4]
+            )  # sum over all storage techs
+        )
+        stored.index.names = ["t", "Stf", "Site", "Storage", "Commodity"]
+
+        # created = created.join(stored)
+
+    except KeyError:
+        # storage empty
+        stored = pd.DataFrame(index=timesteps)
+        pass
+
+    # show throughput of stock /the output of commodity
+
+    balance.sort_index()
+
+    throughput = get_entity(instance, "tau_pro").rename("throughput")
+    balance = (
+        balance.stack()
+        .unstack(level="com")
+        .rename_axis(index={None: "pro"})
+        .join(throughput)
+    )
+
+    balance.index.names = ["t", "Stf", "Site", "Process"]
+
+    return created, transmitted, stored, balance
+
+
+def get_dual(instance, constraint):
+    return get_entity(instance, constraint)
 
 
 def drop_all_zero_columns(df):
