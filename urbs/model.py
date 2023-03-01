@@ -497,9 +497,8 @@ def create_model(data, dt=1, timesteps=None, objective="cost", dual=True):
 # contains implicit constraint for stock commodity source term
 def res_vertex_rule(m, tm, stf, sit, com, com_type):
     # environmental or supim commodities don't have this constraint (yet)
-    if com in m.com_env:
-        return pyomo.Constraint.Skip
-    if com in m.com_supim:
+
+    if com not in m.com_stock | m.com_demand:
         return pyomo.Constraint.Skip
 
     # helper function commodity_balance calculates balance from input to
