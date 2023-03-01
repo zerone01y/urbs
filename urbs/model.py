@@ -278,7 +278,7 @@ def create_model(data, dt=1, timesteps=None, objective="cost", dual=True):
     m.e_pro_out = pyomo.Var(
         m.tm,
         m.pro_output_tuples,
-        within=pyomo.NonNegativeReals,
+        within=pyomo.Reals,
         doc="Power flow out of process (MW) per timestep",
     )
 
