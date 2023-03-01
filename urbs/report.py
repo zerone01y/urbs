@@ -337,13 +337,23 @@ def report_all(
         ctra["Scenario"] = sce
         # combine two levels of column index
         ctra.columns = ctra.columns.map(".".join).str.strip(".")
-
+    else:
+        ctra = pd.DataFrame(
+                            columns=['Year', 'From', 'To', 'Transmission', 'Commodity', 'Capacity.Total', 'Capacity.New', 'Forward.exported',
+       'Forward.imported', 'Backward.exported', 'Backward.imported',
+       'Scenario'])
     if instance.mode["sto"]:
         stored = (stored.unstack(0).sum(axis=1, level=0)) * instance.weight()
         csto = pd.concat([csto, stored], axis=1, keys=["Capacity", "Stored"]).fillna(0)
         csto["Scenario"] = sce
         csto.columns = csto.columns.map(".".join).str.strip(".")
-
+    else:
+        csto = pd.DataFrame(
+                            columns=['Year', 'Site', 'Storage', 'Commodity',
+                                     'Capacity.C Total', 'Capacity.C New',
+                                     'Capacity.P Total', 'Capacity.P New',
+                                     'Stored.Level', 'Stored.Storage(charging)', 'Stored.Storage(discharging)',
+       'Scenario'])
     # Output to excel
     filename = resultdir / "Scenarios"
     if not filename.is_dir():
@@ -380,10 +390,8 @@ def report_all(
     with sql.connect(str(resultdir / "data.db")) as conn:
         # Annual summary
         cpro.to_sql("Result_Proc", conn, if_exists="append")
-        if instance.mode["tra"]:
-            ctra.to_sql("Result_Trans", conn, if_exists="append")
-        if instance.mode["sto"]:
-            csto.to_sql("Result_Storage", conn, if_exists="append")
+        ctra.to_sql("Result_Trans", conn, if_exists="append")
+        csto.to_sql("Result_Storage", conn, if_exists="append")
         # Vars
         for var in [
             "e_co_stock",

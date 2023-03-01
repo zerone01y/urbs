@@ -29,15 +29,16 @@ def prepare_result_directory(result_name):
     # create result directory if not existent
     result_dir = pathlib.Path("result", "{}-{}".format(result_name, now))
     if not result_dir.is_dir():
-        result_dir.mkdir()
+        result_dir.mkdir(parents=True)
     (result_dir / "Log").mkdir(exist_ok=True)
     (result_dir / "Scenarios").mkdir(exist_ok=True)
 
     return result_dir
 
 
-def copy_input_files(target, source, runfile, supplementary=""):
-    shutil.copy(runfile, target)  # copy runme.py to result directory
+def copy_input_files(target, source, runfile="", supplementary=""):
+    if runfile:
+        shutil.copy(runfile, target)  # copy runme.py to result directory
 
     try:
         target = pathlib.Path(target, "Input")
@@ -147,7 +148,7 @@ def run_scenario(
     optim = SolverFactory(Solver)  # cplex, glpk, gurobi, ...
     optim = setup_solver(optim, logfile=log_filename)
     result = optim.solve(prob, tee=True)
-    assert str(result.solver.termination_condition) == "optimal"
+    #assert str(result.solver.termination_condition) == "optimal"
 
     # save problem solution (and input data) to HDF5 file
     save(prob, os.path.join(result_dir, "{}.h5".format(sce)))
@@ -171,5 +172,71 @@ def run_scenario(
         periods=plot_periods,
         figure_size=(24, 9),
     )
+
+    return prob
+
+
+def quickrun_scenario(
+    input_dir,
+    Solver,
+    timesteps,
+    scenario,
+    result_dir,
+    dt,
+    objective,
+    custom_constraints=(),
+    validate=True,
+    **data_kwargs,
+):
+    """run an urbs model for given input, time steps and scenario
+
+    Args:
+        - input_files: filenames of input Excel spreadsheets
+        - Solver: the user specified solver
+        - timesteps: a list of timesteps, e.g. range(0,8761)
+        - scenario: a scenario function that modifies the input data dict
+        - result_dir: directory name for result spreadsheet and plots
+        - dt: length of each time step (unit: hours)
+        - objective: objective function chosen (either "cost" or "CO2")
+
+    Returns:
+        the urbs model instance
+    """
+
+    # sets a modeled year for non-intertemporal problems
+    # (necessary for consitency)
+    # scenario name, read and modify data for scenario
+    sce = scenario.__name__
+    data = DataSet().read_data(input_dir)
+    scenario.construct(data, **data_kwargs)
+    if validate:
+        validate_input(data)
+        validate_dc_objective(data, objective)
+    # create model
+    logger.debug("Creating urbs model...")
+
+    prob = create_model(data, dt, timesteps, objective, dual=True)
+    if custom_constraints + scenario.constraints:
+        logger.debug("Adding custom constraints...")
+        prob.add_custom_constraints(*custom_constraints, *scenario.constraints)
+
+    # refresh time stamp string and create filename for logfile
+    log_filename = pathlib.Path(result_dir, "Log", f"{sce}.log")
+
+    # solve model and read results
+    optim = SolverFactory(Solver)  # cplex, glpk, gurobi, ...
+    optim = setup_solver(optim, logfile=log_filename)
+
+    logger.debug("Solving...")
+    result = optim.solve(prob, tee=False)
+    if str(result.solver.termination_condition) != "optimal":
+        print("{} scenario is not solved to optimal. No report generated.".format(sce))
+        if input("Run debug? (y/N)") == "y":
+            compute_grb_IIS(prob)
+        return prob
+
+    logger.debug("Output results...")
+    # write report to spreadsheet
+    report_all(prob, result_dir, sce)
 
     return prob

@@ -28,10 +28,9 @@ class DataSet(dict):
         self.update(uinput.read_input(input_path, year))
 
     def _read_parquet(self, input_path):
-        logger.debug(f"Input path: {input_path.absolute()}")
+        logger.debug(f"Input path for parquet: {input_path.absolute()}")
         for filename in input_path.glob("*.parquet"):
             self[filename.stem] = pd.read_parquet(filename)
-            logger.debug(f"read {filename}")
 
         return self
 
@@ -102,33 +101,34 @@ class DataSet(dict):
 
 # a class to construct scenarios
 class Scenario:
-    def __init__(self, name="", callables=(), constraints=(), doc="", *args, **kwargs):
+    def __init__(
+        self, name="", data_updates=(), constraints=(), doc="", *args, **kwargs
+    ):
         if name:
             self.__name__ = name
         self.kwargs = kwargs
         self.doc = doc
-        self.callables = tuple([*callables, *args])
+        self.data_updates = tuple([*data_updates, *args])
         self.constraints = constraints
 
     def construct(self, data, **kwargs):
         self.kwargs.update(kwargs)
 
-        for f in self.callables:
+        for f in self.data_updates:
             f(data, **self.kwargs)
 
-    def update_scenario_rules(self, *args, **kwargs):
+    def update_scenario_data(self, *args, **kwargs):
         if args:
-            self.callables = tuple([*self.callables, *args])
+            self.data_updates = tuple([*self.data_updates, *args])
         if kwargs:
             self.kwargs.update(kwargs)
         return self
 
+    def update_scenario_rule(self, *args, **kwargs):
+        if args:
+            self.constraints = tuple([*self.constraints, *args])
+        return self
 
-def _scenario_base_rules(data, **kwargs):
-    # do nothing
-    return data
-
-
-scenario_base = Scenario(
-    "base", callables=[_scenario_base_rules], doc="The base scenario: do nothing"
-)
+    def rename_scenario(self, name):
+        self.__name__ = name
+        return self
