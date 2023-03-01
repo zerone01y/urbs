@@ -11,53 +11,65 @@ from .saveload import *
 
 
 def prepare_result_directory(result_name):
-    """ create a time stamped directory within the result folder.
+    """create a time stamped directory within the result folder.
 
     Args:
         result_name: user specified result name
 
     Returns:
-        a subfolder in the result folder 
-    
+        a subfolder in the result folder
+
     """
     # timestamp for result directory
-    now = datetime.now().strftime('%Y%m%dT%H%M')
+    now = datetime.now().strftime("%Y%m%dT%H%M")
 
     # create result directory if not existent
-    result_dir = os.path.join('result', '{}-{}'.format(result_name, now))
+    result_dir = os.path.join("result", "{}-{}".format(result_name, now))
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)
 
     return result_dir
 
 
-def setup_solver(optim, logfile='solver.log'):
+def setup_solver(optim, logfile="solver.log"):
     """ """
-    if optim.name == 'gurobi':
+    if optim.name == "gurobi":
         # reference with list of option names
         # http://www.gurobi.com/documentation/5.6/reference-manual/parameters
         optim.set_options("logfile={}".format(logfile))
         # optim.set_options("timelimit=7200")  # seconds
         # optim.set_options("mipgap=5e-4")  # default = 1e-4
-    elif optim.name == 'glpk':
+    elif optim.name == "glpk":
         # reference with list of options
         # execute 'glpsol --help'
         optim.set_options("log={}".format(logfile))
         # optim.set_options("tmlim=7200")  # seconds
         # optim.set_options("mipgap=.0005")
-    elif optim.name == 'cplex':
+    elif optim.name == "cplex":
         optim.set_options("log={}".format(logfile))
     else:
-        print("Warning from setup_solver: no options set for solver "
-              "'{}'!".format(optim.name))
+        print(
+            "Warning from setup_solver: no options set for solver "
+            "'{}'!".format(optim.name)
+        )
     return optim
 
 
-def run_scenario(input_files, Solver, timesteps, scenario, result_dir, dt,
-                 objective, plot_tuples=None,  plot_sites_name=None,
-                 plot_periods=None, report_tuples=None,
-                 report_sites_name=None):
-    """ run an urbs model for given input, time steps and scenario
+def run_scenario(
+    input_files,
+    Solver,
+    timesteps,
+    scenario,
+    result_dir,
+    dt,
+    objective,
+    plot_tuples=None,
+    plot_sites_name=None,
+    plot_periods=None,
+    report_tuples=None,
+    report_sites_name=None,
+):
+    """run an urbs model for given input, time steps and scenario
 
     Args:
         - input_files: filenames of input Excel spreadsheets
@@ -97,33 +109,35 @@ def run_scenario(input_files, Solver, timesteps, scenario, result_dir, dt,
     # prob.write(prob_filename, io_options={'symbolic_solver_labels':True})
 
     # refresh time stamp string and create filename for logfile
-    log_filename = os.path.join(result_dir, '{}.log').format(sce)
+    log_filename = os.path.join(result_dir, "{}.log").format(sce)
 
     # solve model and read results
     optim = SolverFactory(Solver)  # cplex, glpk, gurobi, ...
     optim = setup_solver(optim, logfile=log_filename)
     result = optim.solve(prob, tee=True)
-    assert str(result.solver.termination_condition) == 'optimal'
+    assert str(result.solver.termination_condition) == "optimal"
 
     # save problem solution (and input data) to HDF5 file
-    save(prob, os.path.join(result_dir, '{}.h5'.format(sce)))
+    save(prob, os.path.join(result_dir, "{}.h5".format(sce)))
 
     # write report to spreadsheet
     report(
         prob,
-        os.path.join(result_dir, '{}.xlsx').format(sce),
+        os.path.join(result_dir, "{}.xlsx").format(sce),
         report_tuples=report_tuples,
-        report_sites_name=report_sites_name)
+        report_sites_name=report_sites_name,
+    )
 
     # result plots
     result_figures(
         prob,
-        os.path.join(result_dir, '{}'.format(sce)),
+        os.path.join(result_dir, "{}".format(sce)),
         timesteps,
-        plot_title_prefix=sce.replace('_', ' '),
+        plot_title_prefix=sce.replace("_", " "),
         plot_tuples=plot_tuples,
         plot_sites_name=plot_sites_name,
         periods=plot_periods,
-        figure_size=(24, 9))
+        figure_size=(24, 9),
+    )
 
     return prob
