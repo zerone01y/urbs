@@ -10,6 +10,7 @@ from .dataset import DataSet
 from .plot import result_figures
 import pathlib
 import shutil
+from loguru import logger
 
 
 def prepare_result_directory(result_name):
@@ -33,6 +34,33 @@ def prepare_result_directory(result_name):
     (result_dir / "Scenarios").mkdir(exist_ok=True)
 
     return result_dir
+
+
+def copy_input_files(target, source, runfile, supplementary=""):
+    shutil.copy(runfile, target)  # copy runme.py to result directory
+
+    try:
+        target = pathlib.Path(target, "Input")
+        shutil.copytree(source, target)
+        if supplementary:
+            shutil.copytree(supplementary, target / "supplementary")
+        input_dir = target
+    except NotADirectoryError:
+        target.mkdir(exist_ok=True)
+        shutil.copyfile(source, target / source.name)
+        input_dir = target / source.name
+
+    return input_dir
+
+
+def compute_grb_IIS(prob) -> None:
+    optim = SolverFactory("gurobi_direct")
+    result = optim.solve(prob, tee=True)
+    m = optim._solver_model
+    m.computeIIS()
+    for c in m.getConstrs():
+        if c.IISConstr:
+            print(optim._solver_con_to_pyomo_con_map[c])
 
 
 def setup_solver(optim, logfile="solver.log"):
