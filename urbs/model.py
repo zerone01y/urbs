@@ -358,7 +358,7 @@ def create_model(data, dt=1, timesteps=None, objective="cost", dual=True):
         m.tm,
         m.pro_input_tuples,
         rule=def_intermittent_supply_rule,
-        doc="process output = process capacity * supim timeseries",
+        doc="process input = process capacity * supim timeseries",
     )
     m.res_process_throughput_by_capacity = pyomo.Constraint(
         m.tm,

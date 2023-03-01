@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 import glob
-from xlrd import XLRDError
 import pyomo.core as pyomo
 from .features.modelhelper import *
 from .identify import *
@@ -232,12 +231,14 @@ def pyomo_model_prep(data, timesteps):
 
     # additional features
     if m.mode["tra"]:
-        transmission = data["transmission"].dropna(axis=0, how="all")
+        data["transmission"].dropna(axis=0, how="all", inplace=True)
+        transmission = data["transmission"]
         # create no expansion dataframes
         tra_const_cap = transmission[transmission["inst-cap"] == transmission["cap-up"]]
 
     if m.mode["sto"]:
-        storage = data["storage"].dropna(axis=0, how="all")
+        data["storage"].dropna(axis=0, how="all", inplace=True)
+        storage = data["storage"]
         # create no expansion dataframes
         sto_const_cap_c = storage[storage["inst-cap-c"] == storage["cap-up-c"]]
         sto_const_cap_p = storage[storage["inst-cap-p"] == storage["cap-up-p"]]
@@ -635,7 +636,7 @@ def split_columns(columns, sep="."):
     """
     if len(columns) == 0:
         return columns
-    column_tuples = [tuple(col.split(".")) for col in columns]
+    column_tuples = [tuple(col.split(sep)) for col in columns]
     return pd.MultiIndex.from_tuples(column_tuples)
 
 
