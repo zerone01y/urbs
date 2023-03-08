@@ -372,7 +372,7 @@ def get_all_timeseries(instance, timesteps=None):
             keys=["exported", "imported"],
         )
 
-        transmitted.index.names = ["t", "Stf", "From", "To", "Tra", "Commodity"]
+        transmitted.index.names = ["t", "Stf", "Site In", "Site Out", "Transmission", "Commodity"]
 
     except KeyError:
         # imported and exported are empty
