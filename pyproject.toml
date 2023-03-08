@@ -6,5 +6,20 @@ build-backend = "setuptools.build_meta"
 name = "urbs"
 version = "0.0.1"
 dependencies = [
-    'importlib-metadata; python_version<"3.8"',
+    'importlib-metadata',
+    'numpy <= 1.19',
+    'pandas',
+    'pandas-datareader',
+    'matplotlib',
+    'openpyxl==3.0.1',
+    'xlrd == 1.2.0',
+    'pyomo <= 5.6.8',
+    'loguru',
+    'pyarrow',
+    'tables == 3.6.1',
+    #'glpk',
+    'psutil == 5.6',
+    'pyutilib == 5.8'
 ]
+[project.optional-dependencies]
+DEV = ["black",]
