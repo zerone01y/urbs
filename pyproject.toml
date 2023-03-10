@@ -5,10 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "urbs"
 version = "0.0.1"
+requires-python = "<3.8"
 dependencies = [
     'importlib-metadata',
     'numpy <= 1.19',
-    'pandas',
+    'pandas <= 1.2',
     'pandas-datareader',
     'matplotlib',
     'openpyxl==3.0.1',
@@ -16,10 +17,13 @@ dependencies = [
     'pyomo <= 5.6.8',
     'loguru',
     'pyarrow',
+    'rich[jupyter]',
     'tables == 3.6.1',
     #'glpk',
     'psutil == 5.6',
-    'pyutilib == 5.8'
+    'pyutilib == 5.8',
+    'notebook',
 ]
 [project.optional-dependencies]
-DEV = ["black",]
+dev = ["black[d,jupyter]", 'pre-commit']
+gurobi = ['gurobipy']
