@@ -6,7 +6,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 
-
 class DataSet(dict):
     def read_data(self, input_path):
         if input_path.suffix == ".xlsx":
@@ -96,7 +95,6 @@ class DataSet(dict):
 
         """
         return data
-
 
 
 # a class to construct scenarios

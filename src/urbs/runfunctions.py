@@ -148,7 +148,7 @@ def run_scenario(
     optim = SolverFactory(Solver)  # cplex, glpk, gurobi, ...
     optim = setup_solver(optim, logfile=log_filename)
     result = optim.solve(prob, tee=True)
-    #assert str(result.solver.termination_condition) == "optimal"
+    # assert str(result.solver.termination_condition) == "optimal"
 
     # save problem solution (and input data) to HDF5 file
     save(prob, os.path.join(result_dir, "{}.h5".format(sce)))

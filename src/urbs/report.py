@@ -339,9 +339,21 @@ def report_all(
         ctra.columns = ctra.columns.map(".".join).str.strip(".")
     else:
         ctra = pd.DataFrame(
-                            columns=['Year', 'From', 'To', 'Transmission', 'Commodity', 'Capacity.Total', 'Capacity.New', 'Forward.exported',
-       'Forward.imported', 'Backward.exported', 'Backward.imported',
-       'Scenario'])
+            columns=[
+                "Year",
+                "From",
+                "To",
+                "Transmission",
+                "Commodity",
+                "Capacity.Total",
+                "Capacity.New",
+                "Forward.exported",
+                "Forward.imported",
+                "Backward.exported",
+                "Backward.imported",
+                "Scenario",
+            ]
+        )
     if instance.mode["sto"]:
         stored = (stored.unstack(0).sum(axis=1, level=0)) * instance.weight()
         csto = pd.concat([csto, stored], axis=1, keys=["Capacity", "Stored"]).fillna(0)
@@ -349,11 +361,21 @@ def report_all(
         csto.columns = csto.columns.map(".".join).str.strip(".")
     else:
         csto = pd.DataFrame(
-                            columns=['Year', 'Site', 'Storage', 'Commodity',
-                                     'Capacity.C Total', 'Capacity.C New',
-                                     'Capacity.P Total', 'Capacity.P New',
-                                     'Stored.Level', 'Stored.Storage(charging)', 'Stored.Storage(discharging)',
-       'Scenario'])
+            columns=[
+                "Year",
+                "Site",
+                "Storage",
+                "Commodity",
+                "Capacity.C Total",
+                "Capacity.C New",
+                "Capacity.P Total",
+                "Capacity.P New",
+                "Stored.Level",
+                "Stored.Storage(charging)",
+                "Stored.Storage(discharging)",
+                "Scenario",
+            ]
+        )
     # Output to excel
     filename = resultdir / "Scenarios"
     if not filename.is_dir():

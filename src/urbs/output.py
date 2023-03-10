@@ -69,6 +69,7 @@ def get_constants(instance):
 
     return costs, cpro, ctra, csto
 
+
 def get_com_list_annual(instance, com):
     return (
         get_entity(instance, "e_pro_out")
@@ -372,7 +373,14 @@ def get_all_timeseries(instance, timesteps=None):
             keys=["exported", "imported"],
         )
 
-        transmitted.index.names = ["t", "Stf", "Site In", "Site Out", "Transmission", "Commodity"]
+        transmitted.index.names = [
+            "t",
+            "Stf",
+            "Site In",
+            "Site Out",
+            "Transmission",
+            "Commodity",
+        ]
 
     except KeyError:
         # imported and exported are empty

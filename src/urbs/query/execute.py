@@ -3,6 +3,7 @@ import sqlite3 as sql
 
 from loguru import logger
 
+
 def export_results(result_dir, queries="urbs/query"):
     import csv
 
@@ -31,8 +32,9 @@ def export_results(result_dir, queries="urbs/query"):
             header = [head[0] for head in cursor.description]
 
             data = cursor.fetchall()
-            with open(result_dir / (file.stem.replace("table_", "") + ".csv")
-                    , "w", newline="") as f_handle:
+            with open(
+                result_dir / (file.stem.replace("table_", "") + ".csv"), "w", newline=""
+            ) as f_handle:
                 writer = csv.writer(f_handle)
                 # Add the header/column names
                 writer.writerow(header)
