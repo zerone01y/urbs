@@ -300,6 +300,7 @@ def report_all(
         transmitted = (
             transmitted[["exported", "imported"]].unstack(0).sum(axis=1, level=0)
         ) * instance.weight()
+        assert transmitted.shape[0] == ctra.shape[0]
         ctra = (
             pd.concat([ctra, transmitted], axis=1, keys=["Capacity", "Transmitted"])
             .fillna(0)
@@ -309,29 +310,32 @@ def report_all(
         # One row for Each physical line, show the throughput of both directions of the transmission lines.
 
         ctra = (
-            ctra.loc[ctra["Site In"] < ctra["Site Out"]]
-            .rename(columns={"Transmitted": "Forward"})
-            .merge(
-                ctra.loc[ctra["Site In"] > ctra["Site Out"]].rename(
-                    columns={
-                        "Site In": "Site Out",
-                        "Site Out": "Site In",
-                        "Transmitted": "Backward",
-                    }
-                ),
-                on=[
-                    ("Stf", ""),
-                    ("Site In", ""),
-                    ("Site Out", ""),
-                    ("Transmission", ""),
-                    ("Commodity", ""),
-                    ("Capacity", "Total"),
-                    ("Capacity", "New"),
-                ],
-                sort=True,
+            (
+                ctra.loc[ctra["Site In"] < ctra["Site Out"]]
+                .rename(columns={"Transmitted": "Forward"})
+                .merge(
+                    ctra.loc[ctra["Site In"] > ctra["Site Out"]].rename(
+                        columns={
+                            "Site In": "Site Out",
+                            "Site Out": "Site In",
+                            "Transmitted": "Backward",
+                        }
+                    ),
+                    on=[
+                        ("Stf", ""),
+                        ("Site In", ""),
+                        ("Site Out", ""),
+                        ("Transmission", ""),
+                        ("Commodity", ""),
+                    ],
+                    sort=True,
+                    suffixes=("", "_"),
+                )
+                .set_index(["Stf", "Site In", "Site Out", "Transmission", "Commodity"])
+                .rename_axis(index={"Site In": "From", "Site Out": "To"})
             )
-            .set_index(["Stf", "Site In", "Site Out", "Transmission", "Commodity"])
-            .rename_axis(index={"Site In": "From", "Site Out": "To"})
+            .sort_index(axis=1)
+            .drop(columns="Capacity_")
         )
 
         ctra["Scenario"] = sce
