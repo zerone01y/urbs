@@ -115,9 +115,14 @@ class Scenario:
         for f in self.data_updates:
             f(data, **self.kwargs)
 
-    def update_scenario_data(self, *args, **kwargs):
-        if args:
-            self.data_updates = tuple([*self.data_updates, *args])
+    def update_scenario_data(self, *update_functions, **kwargs):
+        if update_functions:
+            self.data_updates = tuple(
+                [
+                    *update_functions,
+                    *self.data_updates,
+                ]
+            )
         if kwargs:
             self.kwargs.update(kwargs)
         return self
