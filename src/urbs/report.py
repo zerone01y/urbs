@@ -31,8 +31,9 @@ def input_data_report(prob, conn, sce):
 
     for df in prob._data:
         # drop duplicated columns
-        for c in prob._data[df].columns.intersection(prob._data[df].index.names):
-            prob._data[df].drop([c], axis=1, inplace=True)
+        if df not in ["supim"]:
+            for c in prob._data[df].columns.intersection(prob._data[df].index.names):
+                prob._data[df].drop([c], axis=1, inplace=True)
         if not prob._data[df].empty:
             prob._data[df]["Scenario"] = sce
         prob._data[df].to_sql("Input_" + df, conn, if_exists="append")
@@ -283,7 +284,6 @@ def report_all(
     ) * instance.weight()  # sum timeseries over t to obtain annual results
 
     cpro = pd.concat([cpro, balance], axis=1, keys=("Capacity", "Generation")).fillna(0)
-    # .dropna(     axis=0, how="any"    )
     cpro = cpro.loc[(cpro != 0).any(axis=1)]
     cpro["Scenario"] = sce
     cpro.columns = cpro.columns.map(".".join).str.strip(".")

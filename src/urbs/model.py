@@ -935,7 +935,8 @@ def co2_rule(m):
                     )
                 else:
                     co2_output_sum += (
-                        -commodity_balance(m, tm, stf, sit, "CO2") * m.weight
+                        -commodity_balance(m, tm, stf, sit, "CO2")
+                        * m.weight
                     )
 
     return co2_output_sum
