@@ -414,6 +414,14 @@ def create_model(data, dt=1, timesteps=None, objective="cost", dual=True):
         " + tau_pro * (R - min_fraction * r) / (1 - min_fraction)",
     )
 
+    # region-specific constraints
+    m.res_region_env_budget = pyomo.Constraint(
+        m.sit,
+        m.com_env,
+        rule=res_regional_env_budget_rule,
+        doc="total commodity output <= sit.ComBudget",
+    )
+
     # if m.mode['int']:
     #    m.res_global_co2_limit = pyomo.Constraint(
     #        m.stf,
@@ -571,6 +579,8 @@ def res_env_step_rule(m, tm, stf, sit, com, com_type):
         return pyomo.Constraint.Skip
     else:
         environmental_output = -commodity_balance(m, tm, stf, sit, com)
+        if isinstance(environmental_output, (float, int)):
+            return pyomo.Constraint.Skip
         return (
             environmental_output
             <= m.dt * m.commodity_dict["maxperhour"][(stf, sit, com, com_type)]
@@ -587,6 +597,8 @@ def res_env_total_rule(m, stf, sit, com, com_type):
         env_output_sum = 0
         for tm in m.tm:
             env_output_sum += -commodity_balance(m, tm, stf, sit, com)
+        if isinstance(env_output_sum, (float, int)):
+            return pyomo.Constraint.Skip
         env_output_sum *= m.weight
         return env_output_sum <= m.commodity_dict["max"][(stf, sit, com, com_type)]
 
@@ -774,17 +786,7 @@ def res_global_co2_budget_rule(m):
     if math.isinf(m.global_prop_dict["value"][min(m.stf_list), "CO2 budget"]):
         return pyomo.Constraint.Skip
     elif (m.global_prop_dict["value"][min(m.stf_list), "CO2 budget"]) >= 0:
-        co2_output_sum = 0
-        for stf in m.stf:
-            for tm in m.tm:
-                for sit in m.sit:
-                    # minus because negative commodity_balance represents
-                    # creation of that commodity.
-                    co2_output_sum += (
-                        -commodity_balance(m, tm, stf, sit, "CO2")
-                        * m.weight
-                        * stf_dist(stf, m)
-                    )
+        co2_output_sum = env_com_rule(m, "CO2")
 
         return co2_output_sum <= m.global_prop_dict["value"][min(m.stf), "CO2 budget"]
     else:
@@ -812,6 +814,19 @@ def res_global_cost_budget_rule(m):
             pyomo.summation(m.costs)
             <= m.global_prop_dict["value"][min(m.stf), "Cost budget"]
         )
+    else:
+        return pyomo.Constraint.Skip
+
+
+def res_regional_env_budget_rule(m, sit, com):
+    colname = "ComBudget." + com
+    if colname not in m.site_dict:
+        return pyomo.Constraint.Skip
+    if math.isinf(m.site_dict[colname][min(m.stf_list), sit]):
+        return pyomo.Constraint.Skip
+    elif m.site_dict[colname][min(m.stf_list), sit] >= 0:
+        com_output_sum = env_com_rule(m, com)
+        return com_output_sum <= m.site_dict[colname][min(m.stf_list), sit]
     else:
         return pyomo.Constraint.Skip
 
@@ -921,6 +936,10 @@ def cost_rule(m):
 
 # CO2 output in entire period <= Global CO2 budget
 def co2_rule(m):
+    return env_com_rule(m, "CO2")
+
+
+def env_com_rule(m, com):
     co2_output_sum = 0
     for stf in m.stf:
         for tm in m.tm:
@@ -929,14 +948,13 @@ def co2_rule(m):
                 # creation of that commodity.
                 if m.mode["int"]:
                     co2_output_sum += (
-                        -commodity_balance(m, tm, stf, sit, "CO2")
+                        -commodity_balance(m, tm, stf, sit, com)
                         * m.weight
                         * stf_dist(stf, m)
                     )
                 else:
                     co2_output_sum += (
-                        -commodity_balance(m, tm, stf, sit, "CO2")
-                        * m.weight
+                        -commodity_balance(m, tm, stf, sit, com) * m.weight
                     )
 
     return co2_output_sum
