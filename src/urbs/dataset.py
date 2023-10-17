@@ -127,6 +127,18 @@ class Scenario:
             self.kwargs.update(kwargs)
         return self
 
+    def append_scenario_data(self, *update_functions, **kwargs):
+        if update_functions:
+            self.data_updates = tuple(
+                [
+                    *self.data_updates,
+                    *update_functions,
+                ]
+            )
+        if kwargs:
+            self.kwargs.update(kwargs)
+        return self
+
     def update_scenario_rule(self, *args, **kwargs):
         if args:
             self.constraints = tuple([*self.constraints, *args])
